@@ -1,16 +1,13 @@
 from flask import Flask, request, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import Base, User, ChatSession, Message
+from app.models import Base, User, ChatSession, Message, Product
+from app.llm_service import get_llm_response
 from datetime import datetime
 
 app = Flask(__name__)
 engine = create_engine('sqlite:///ecommerce.db')
 SessionLocal = sessionmaker(bind=engine)
-
-# Dummy LLM response generator
-def generate_response(user_message):
-    return f"Echo: {user_message}"
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -24,7 +21,7 @@ def chat():
     if not user_id or not message_text:
         return jsonify({'error': 'user_id and message are required'}), 400
 
-    # Step 1: Create new chat session if needed
+    # Step 1: Create or get chat session
     if not conversation_id:
         session = ChatSession(user_id=user_id, created_at=datetime.utcnow(), session_name="Chat Session")
         db.add(session)
@@ -36,7 +33,7 @@ def chat():
         if not session:
             return jsonify({'error': 'Invalid conversation_id'}), 404
 
-    # Step 2: Save user message
+    # Step 2: Store user message
     user_msg = Message(
         session_id=conversation_id,
         sender='user',
@@ -45,8 +42,24 @@ def chat():
     )
     db.add(user_msg)
 
-    # Step 3: Generate AI reply (mocked)
-    ai_reply_text = generate_response(message_text)
+    # Step 3: Create LLM prompt
+    message_history = [
+        {"role": "system", "content": "You are a helpful AI assistant for an eCommerce site. Ask clarifying questions if information is incomplete."},
+        {"role": "user", "content": message_text}
+    ]
+
+    # Optional: Basic business logic before calling LLM
+    if "red dress" in message_text.lower():
+        product = db.query(Product).filter(Product.name.ilike("%red dress%")).first()
+        if product:
+            ai_reply_text = f"We have a red dress in {product.department} at ₹{product.retail_price}."
+        else:
+            ai_reply_text = "Sorry, we couldn't find a red dress in stock."
+    else:
+        # Step 4: Get LLM response
+        ai_reply_text = get_llm_response(message_history)
+
+    # Step 5: Store bot response
     ai_msg = Message(
         session_id=conversation_id,
         sender='bot',
@@ -54,10 +67,9 @@ def chat():
         created_at=datetime.utcnow()
     )
     db.add(ai_msg)
-
     db.commit()
 
-    # Step 4: Return chat history
+    # Step 6: Return chat history
     messages = db.query(Message).filter_by(session_id=conversation_id).order_by(Message.created_at).all()
     chat_history = [
         {
@@ -71,4 +83,3 @@ def chat():
         'conversation_id': conversation_id,
         'messages': chat_history
     })
-
