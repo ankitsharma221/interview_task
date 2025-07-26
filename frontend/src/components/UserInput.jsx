@@ -1,25 +1,27 @@
-import React, { useState } from 'react';
+import React, { useContext } from 'react';
+import { ChatContext } from '../context/ChatContext';
 
-const UserInput = ({ onSend }) => {
-  const [input, setInput] = useState('');
+const UserInput = () => {
+  const { input, setInput, sendMessage, loading } = useContext(ChatContext);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    onSend(input);
-    setInput('');
+    sendMessage();
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', padding: '10px' }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
       <input
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Type a message..."
-        style={{ flexGrow: 1, padding: '10px' }}
+        disabled={loading}
+        placeholder="Type your message..."
+        style={{ flex: 1, padding: '10px' }}
       />
-      <button type="submit" style={{ marginLeft: '10px' }}>Send</button>
+      <button type="submit" disabled={loading} style={{ padding: '10px 20px' }}>
+        {loading ? 'Sending...' : 'Send'}
+      </button>
     </form>
   );
 };

@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { ChatContext } from '../context/ChatContext';
 import Message from './Message';
 
-const MessageList = ({ messages }) => (
-  <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '10px' }}>
-    {messages.map((msg, index) => (
-      <Message key={index} sender={msg.sender} text={msg.text} />
-    ))}
-  </div>
-);
+const MessageList = () => {
+  const { messages } = useContext(ChatContext);
+
+  return (
+    <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
+      {messages.map((msg, index) => (
+        <Message key={index} sender={msg.sender} text={msg.text} />
+      ))}
+    </div>
+  );
+};
 
 export default MessageList;
